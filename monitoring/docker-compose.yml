@@ -1,0 +1,116 @@
+version: "3.9"
+
+name: monitoring
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=${PROM_RETENTION}
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prom_data:/prometheus
+    networks:
+      - mon
+      - edge
+    restart: always
+
+  loki:
+    image: grafana/loki:2.9.7
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ./loki/config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - mon
+    restart: always
+
+  promtail:
+    image: grafana/promtail:2.9.7
+    command: ["-config.file=/etc/promtail/config.yaml"]
+    volumes:
+      - ./promtail/config.yaml:/etc/promtail/config.yaml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - mon
+    restart: always
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.2
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - mon
+    restart: always
+
+  node_exporter:
+    image: prom/node-exporter:v1.8.2
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - mon
+    restart: always
+
+  blackbox:
+    image: prom/blackbox-exporter:v0.25.0
+    networks:
+      - mon
+      - edge
+    restart: always
+
+  redis_exporter:
+    image: oliver006/redis_exporter:v1.62.0
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    networks:
+      - mon
+      - portal_net   # <— join the portal stack network
+    restart: always
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+      - TZ=${TZ}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - mon
+      - edge
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_NETWORK}
+      - traefik.http.routers.grafana.rule=Host(`${DOMAIN_GRAFANA}`)
+      - traefik.http.routers.grafana.entrypoints=websecure
+      - traefik.http.routers.grafana.tls.certresolver=le
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
+    restart: always
+
+networks:
+  mon: {}
+  edge:
+    external: true
+    name: ${TRAEFIK_NETWORK}
+  portal_net:
+    external: true
+    name: ${PORTAL_NETWORK}
+
+volumes:
+  prom_data: {}
+  loki_data: {}
+  grafana_data: {}
