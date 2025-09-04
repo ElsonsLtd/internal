@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/../portal"
+cp -n .env.example .env || true
+echo "Edit portal/.env then run:"
+echo "  docker compose pull --ignore-pull-failures"
+echo "  docker compose up -d --build"
