@@ -1,0 +1,8 @@
+# Remove old remote if it exists
+git remote remove origin 2>/dev/null
+
+# Add the correct GitHub remote
+git remote add origin git@github.com:ElsonsLtd/internal.git
+
+# Push your existing commit
+git push -u origin main
