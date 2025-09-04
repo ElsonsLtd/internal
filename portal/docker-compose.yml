@@ -1,0 +1,54 @@
+version: "3.9"
+
+name: portal
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - redis_data:/data
+    networks:
+      - portal_net
+
+  api:
+    build:
+      context: ./app
+    image: elsons/portal:latest
+    environment:
+      - TZ=${TZ}
+      - SECRET_KEY=${SECRET_KEY}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - N8N_WEBHOOK_GENERATE_CSV=${N8N_WEBHOOK_GENERATE_CSV}
+      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
+      - R2_BUCKET=${R2_BUCKET}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+      - R2_PUBLIC_BASE=${R2_PUBLIC_BASE}
+    depends_on:
+      - redis
+    networks:
+      - portal_net
+      - edge
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_NETWORK}
+      - traefik.http.routers.portal.rule=Host(`${DOMAIN_PORTAL}`)
+      - traefik.http.routers.portal.entrypoints=websecure
+      - traefik.http.routers.portal.tls.certresolver=le
+      - traefik.http.services.portal.loadbalancer.server.port=8080
+
+networks:
+  portal_net:
+    external: true
+    name: ${PORTAL_NETWORK}
+  edge:
+    external: true
+    name: ${TRAEFIK_NETWORK}
+
+volumes:
+  redis_data: {}
