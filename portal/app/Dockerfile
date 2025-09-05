@@ -5,9 +5,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# system deps
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# python deps
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
-# uvicorn will serve on 0.0.0.0:8080 for Traefik
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+# app
+COPY app ./app
+COPY uvicorn.sh ./uvicorn.sh
+RUN chmod +x ./uvicorn.sh
+
+EXPOSE 8000
+CMD ["./uvicorn.sh"]
