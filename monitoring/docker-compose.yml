@@ -83,9 +83,9 @@ services:
   grafana:
     image: grafana/grafana:11.1.0
     environment:
-      - GF_SECURITY_ADMIN_USER: admin
-      - GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
-      - TZ=${TZ}
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
+      TZ=${TZ}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
@@ -120,4 +120,5 @@ volumes:
 secrets:
   grafana_admin_password:
     file: /srv/secrets/monitoring/grafana_admin_password
+
 
