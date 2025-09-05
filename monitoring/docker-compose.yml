@@ -100,6 +100,8 @@ services:
       - traefik.http.routers.grafana.tls.certresolver=le
       - traefik.http.services.grafana.loadbalancer.server.port=3000
     restart: always
+    secrets:
+      - grafana_admin_password
 
 networks:
   mon: {}
@@ -114,3 +116,7 @@ volumes:
   prom_data: {}
   loki_data: {}
   grafana_data: {}
+
+secrets:
+  grafana_admin_password:
+    file: /srv/secrets/monitoring/grafana_admin_password
