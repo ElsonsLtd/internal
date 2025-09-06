@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -5,20 +6,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# system deps
-RUN apt-get update -qq && apt-get install -y --no-install-recommends \
-    curl ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+# System deps
+RUN apt-get update -qq \
+ && apt-get install -y --no-install-recommends curl ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
 
-# python deps
-COPY requirements.txt .
+# Python deps
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# app
-COPY ./app
-COPY uvicorn.sh ./uvicorn.sh
-RUN chmod +x ./uvicorn.sh
+# App code
+COPY . /app/
 
+# Uvicorn entry
+RUN chmod +x /app/uvicorn.sh
 EXPOSE 8000
-CMD ["./uvicorn.sh"]
-
+CMD ["/app/uvicorn.sh"]
