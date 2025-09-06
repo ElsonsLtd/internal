@@ -15,9 +15,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # app
-COPY app ./app
+COPY ./app
 COPY uvicorn.sh ./uvicorn.sh
 RUN chmod +x ./uvicorn.sh
 
 EXPOSE 8000
 CMD ["./uvicorn.sh"]
+
