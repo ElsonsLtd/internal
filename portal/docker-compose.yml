@@ -42,6 +42,7 @@ services:
       - traefik.http.routers.portal.rule=Host("${DOMAIN_PORTAL}")
       - traefik.http.routers.portal.entrypoints=websecure
       - traefik.http.routers.portal.tls.certresolver=le
+      - traefik.http.routers.portal.service=portal
       - traefik.http.services.portal.loadbalancer.server.port=8000
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/healthz"]
@@ -60,4 +61,5 @@ networks:
   portal:
     external: true
     name: ${PORTAL_NETWORK}
+
 
