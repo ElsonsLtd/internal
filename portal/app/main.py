@@ -1,37 +1,67 @@
-import os
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from jinja2 import Environment, FileSystemLoader
-import httpx
-import redis
+from fastapi.templating import Jinja2Templates
+import os
 
-app = FastAPI()
-templates = Environment(loader=FileSystemLoader("templates"))
+# Optional Redis (async) — works even if not configured
+try:
+    import redis.asyncio as aioredis  # type: ignore
+except Exception:                      # pragma: no cover
+    aioredis = None
 
-# Redis
-r = redis.Redis(
-    host=os.getenv("REDIS_HOST", "redis"),
-    port=int(os.getenv("REDIS_PORT", "6379")),
-    password=os.getenv("REDIS_PASSWORD"),
-    decode_responses=True,
-)
+app = FastAPI(title="Elsons Portal")
 
-@app.get("/healthz")
-def healthz():
-    return {"ok": True}
+templates = Jinja2Templates(directory="templates")
+
+def _read_secret(path: str | None) -> str | None:
+    if not path:
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return None
+
+# ---- Redis wiring (optional) ----
+REDIS_HOST = os.getenv("REDIS_HOST", "redis")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_PASSWORD = _read_secret(os.getenv("REDIS_PASSWORD_FILE"))
+
+_redis = None
+async def get_redis():
+    global _redis
+    if aioredis is None:
+        return None
+    if _redis is None:
+        _redis = aioredis.Redis(
+            host=REDIS_HOST,
+            port=REDIS_PORT,
+            password=REDIS_PASSWORD or None,
+            decode_responses=True,
+            socket_keepalive=True,
+            health_check_interval=30,
+        )
+    return _redis
+
+@app.get("/healthz", response_class=JSONResponse)
+async def healthz():
+    # Basic app liveness + optional redis ping
+    redis_ok = None
+    if aioredis is not None:
+        try:
+            r = await get_redis()
+            if r is not None:
+                await r.ping()
+                redis_ok = True
+            else:
+                redis_ok = None
+        except Exception:
+            redis_ok = False
+    return {"ok": True, "redis": redis_ok}
 
 @app.get("/", response_class=HTMLResponse)
-def index(request: Request):
-    visits = r.incr("visits")
-    tpl = templates.get_template("index.html")
-    return tpl.render(request=request, visits=visits)
-
-@app.post("/actions/generate-csv")
-async def generate_csv():
-    url = os.getenv("N8N_WEBHOOK_GENERATE_CSV")
-    if not url:
-        return JSONResponse({"error": "N8N webhook not configured"}, status_code=status.HTTP_400_BAD_REQUEST)
-    async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.post(url, json={"source": "internal-portal"})
-    return JSONResponse({"status": "triggered", "n8n_status": resp.status_code})
+async def index(request: Request):
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request, "title": "Elsons Portal"}
+    )
