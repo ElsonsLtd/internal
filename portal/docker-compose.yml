@@ -39,7 +39,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=${TRAEFIK_NETWORK}
-      - traefik.http.routers.portal.rule=Host(`${DOMAIN_PORTAL}`)
+      - traefik.http.routers.portal.rule=Host("${DOMAIN_PORTAL}")
       - traefik.http.routers.portal.entrypoints=websecure
       - traefik.http.routers.portal.tls.certresolver=le
       - traefik.http.services.portal.loadbalancer.server.port=8000
@@ -60,3 +60,4 @@ networks:
   portal:
     external: true
     name: ${PORTAL_NETWORK}
+
