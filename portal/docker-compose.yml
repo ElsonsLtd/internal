@@ -39,12 +39,11 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=${TRAEFIK_NETWORK}
-      - traefik.http.routers.portal.rule=Host("${DOMAIN_PORTAL}")
+      - traefik.http.routers.portal.rule=Host("${DOMAIN_PORTAL}") && PathPrefix("/")
       - traefik.http.routers.portal.entrypoints=websecure
       - traefik.http.routers.portal.tls.certresolver=le
       - traefik.http.routers.portal.service=8000
       - traefik.http.services.8000.loadbalancer.server.port=8000
-      - traefik.http.routers.portal.rule=Host("${DOMAIN_PORTAL}") && PathPrefix("/")
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/healthz"]
       interval: 15s
@@ -62,6 +61,7 @@ networks:
   portal:
     external: true
     name: ${PORTAL_NETWORK}
+
 
 
 
